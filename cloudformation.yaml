@@ -85,6 +85,36 @@ Resources:
       - Protocol: email
         Endpoint:
           Ref: NotificationEmail
+  Module1:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/dev-jonasrgoes/stacktest/c0ac7b64c77fbc7efe99097483bc5dbb.template
+      Parameters:
+        StackName:
+          Ref: StackName
+        Version:
+          Ref: Version
+        Stage:
+          Ref: Stage
+        LogLevel:
+          Ref: LogLevel
+        NotificationEmail:
+          Ref: NotificationEmail
+  Module2:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/dev-jonasrgoes/stacktest/ca8f17c532502a7ec0f2a386240e3784.template
+      Parameters:
+        StackName:
+          Ref: StackName
+        Version:
+          Ref: Version
+        Stage:
+          Ref: Stage
+        LogLevel:
+          Ref: LogLevel
+        NotificationEmail:
+          Ref: NotificationEmail
 Outputs:
   FunctionRole:
     Value:
