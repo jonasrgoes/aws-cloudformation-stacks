@@ -102,6 +102,7 @@ Resources:
         Version: !Ref Version
         Stage: !Ref Stage
         LogLevel: !Ref LogLevel
+        NotificationEmail: !Ref NotificationEmail
 
   Module2:
     Type: AWS::CloudFormation::Stack
@@ -112,6 +113,7 @@ Resources:
         Version: !Ref Version
         Stage: !Ref Stage
         LogLevel: !Ref LogLevel
+        NotificationEmail: !Ref NotificationEmail
 
 # IMPORTANT:
 #
