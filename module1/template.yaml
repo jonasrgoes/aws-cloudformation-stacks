@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+
+  Module 1
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 128
+    Tracing: Active
+    Layers:
+      - !Sub "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14"
+      - !Sub "arn:aws:lambda:us-east-1:668099181075:layer:AWSLambda-Python-AWS-SDK:4"
+      - !Sub "arn:aws:lambda:us-east-1:025408357061:layer:Requests:2"
+      - Fn::ImportValue:
+          Fn::Sub: "${StackName}-PowerToolsLayer"
+    Environment:
+      Variables:
+        VERSION: !Ref Version
+        STAGE: !Ref Stage
+        LOG_LEVEL: !Ref LogLevel
+        LAMBDA_INSIGHTS_LOG_LEVEL: debug
+        POWERTOOLS_LOGGER_SAMPLE_RATE: 0.1
+        POWERTOOLS_SERVICE_NAME: MODULE1
+        POWERTOOLS_METRICS_NAMESPACE: MODULE1
+        ENT_AWS_REGION: us-east-1
+        CHARSET: UTF-8
+
+Parameters:
+  StackName:
+    Type: String
+
+  Version:
+    Type: String
+
+  LogLevel:
+    Type: String
+
+  NotificationEmail:
+    Type: String
+
+  Stage:
+    Type: String
+
+Resources:
+  SubModule1:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./submodule1/template.yaml
+      Parameters:
+        StackName: !Ref StackName
+        Version: !Ref Version
+        Stage: !Ref Stage
+        LogLevel: !Ref LogLevel
+        NotificationEmail: !Ref NotificationEmail
+
+  SubModule2:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./submodule2/template.yaml
+      Parameters:
+        StackName: !Ref StackName
+        Version: !Ref Version
+        Stage: !Ref Stage
+        LogLevel: !Ref LogLevel
+        NotificationEmail: !Ref NotificationEmail

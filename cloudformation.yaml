@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'aws-cloudformation-stacks
+
+  Sample SAM Template for aws-cloudformation-stacks
+
+  '
+Parameters:
+  StackName:
+    Type: String
+    Default: SubStacksTest
+  Version:
+    Type: String
+    Default: 1
+  LogLevel:
+    Type: String
+    Default: DEBUG
+  EmailFrom:
+    Description: Email address used to send email with SES
+    Type: String
+    Default: foo@bar.com
+  NotificationEmail:
+    Description: Email address used to send alarm notifications
+    Type: String
+    Default: foo@bar.com
+  Stage:
+    AllowedValues:
+    - dev
+    - staging
+    - prod
+    Default: dev
+    Description: What environment is this?
+    Type: String
+Resources:
+  AwsLambdaPowertoolsPythonLayer:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:eu-west-1:057560766410:applications/aws-lambda-powertools-python-layer
+        SemanticVersion: 1.10.2
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+      - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+      - PolicyName: Allow-SES
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+            Resource: '*'
+            Condition:
+              StringEquals:
+                ses:FromAddress:
+                  Ref: EmailFrom
+      - PolicyName: Allow-logs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Protocol: email
+        Endpoint:
+          Ref: NotificationEmail
+Outputs:
+  FunctionRole:
+    Value:
+      Fn::GetAtt:
+      - FunctionRole
+      - Arn
+    Export:
+      Name:
+        Fn::Sub: ${StackName}-FunctionRole
+  AlarmTopic:
+    Value:
+      Ref: AlarmTopic
+    Export:
+      Name:
+        Fn::Sub: ${StackName}-AlarmTopic
+  PowerToolsLayer:
+    Value:
+      Fn::GetAtt:
+      - AwsLambdaPowertoolsPythonLayer
+      - Outputs.LayerVersionArn
+    Export:
+      Name:
+        Fn::Sub: ${StackName}-PowerToolsLayer

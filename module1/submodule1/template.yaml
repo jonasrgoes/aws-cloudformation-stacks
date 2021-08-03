@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+
+  MODULE1 > SUBMODULE1
+
+Globals:
+
+  Function:
+    Timeout: 60
+    MemorySize: 128
+    Tracing: Active
+    Layers:
+      - !Sub "arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14"
+      - !Sub "arn:aws:lambda:us-east-1:668099181075:layer:AWSLambda-Python-AWS-SDK:4"
+      - !Sub "arn:aws:lambda:us-east-1:025408357061:layer:Requests:2"
+      - Fn::ImportValue:
+          Fn::Sub: "${StackName}-PowerToolsLayer"
+    Environment:
+      Variables:
+        VERSION: !Ref Version
+        STAGE: !Ref Stage
+        LOG_LEVEL: !Ref LogLevel
+        LAMBDA_INSIGHTS_LOG_LEVEL: debug
+        POWERTOOLS_LOGGER_SAMPLE_RATE: 0.1
+        POWERTOOLS_SERVICE_NAME: SUBMODULE1
+        POWERTOOLS_METRICS_NAMESPACE: SUBMODULE1
+        ENT_AWS_REGION: us-east-1
+        CHARSET: UTF-8
+
+Parameters:
+
+  StackName:
+    Type: String
+
+  Version:
+    Type: String
+
+  LogLevel:
+    Type: String
+
+  Stage:
+    Type: String
+
+Resources:
+
+  Function1Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: "function1"
+      CodeUri: function1/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Events:
+        Live:
+          Type: Api
+          Properties:
+            Path: /module1/submodule1/function1
+            Method: get
+      Role:
+        Fn::ImportValue:
+          Fn::Sub: "${StackName}-FunctionRole"
+
+  Alarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - Fn::ImportValue:
+            Fn::Sub: "${StackName}-AlarmTopic"
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref Function1Function
+      EvaluationPeriods: 1
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 86400
+      Statistic: Sum
+      Threshold: "3"
+
+  Function2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: "function2"
+      CodeUri: function2/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Events:
+        Live:
+          Type: Api
+          Properties:
+            Path: /module1/submodule1/function2
+            Method: get
+      Role:
+        Fn::ImportValue:
+          Fn::Sub: "${StackName}-FunctionRole"
+
+  Alarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - Fn::ImportValue:
+            Fn::Sub: "${StackName}-AlarmTopic"
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref Function2Function
+      EvaluationPeriods: 1
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 86400
+      Statistic: Sum
+      Threshold: "3"
+
+Outputs:
+
+  Function1FunctionApi:
+    Description: "Function1Function API"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/module1/submodule1/function1/"
+  Function1Function:
+    Description: "Function1Function ARN"
+    Value: !GetAtt Function1Function.Arn
+
+  Function2FunctionApi:
+    Description: "Function2Function API"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/module1/submodule1/function2/"
+  Function2Function:
+    Description: "Function2Function ARN"
+    Value: !GetAtt Function2Function.Arn

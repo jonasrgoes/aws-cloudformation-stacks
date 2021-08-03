@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aws-cloudformation-stacks
+
+  Sample SAM Template for aws-cloudformation-stacks
+
+Parameters:
+  StackName:
+    Type: String
+    Default: SubStacksTest
+
+  Version:
+    Type: String
+    Default: 1
+
+  LogLevel:
+    Type: String
+    Default: DEBUG
+
+  EmailFrom:
+    Description: Email address used to send email with SES
+    Type: String
+    Default: "foo@bar.com"
+
+  NotificationEmail:
+    Description: Email address used to send alarm notifications
+    Type: String
+    Default: "foo@bar.com"
+
+  Stage:
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Default: dev
+    Description: "What environment is this?"
+    Type: String
+
+Resources:
+  AwsLambdaPowertoolsPythonLayer:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:eu-west-1:057560766410:applications/aws-lambda-powertools-python-layer
+        SemanticVersion: 1.10.2 # change to latest semantic version available in SAR
+
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy"
+        - "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+      Policies:
+        - PolicyName: Allow-SES
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ses:SendEmail"
+                  - "ses:SendRawEmail"
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "ses:FromAddress":
+                      Ref: EmailFrom
+        - PolicyName: Allow-logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: arn:aws:logs:*:*:*
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref NotificationEmail
+
+  Module1:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./module1/template.yaml
+      Parameters:
+        StackName: !Ref StackName
+        Version: !Ref Version
+        Stage: !Ref Stage
+        LogLevel: !Ref LogLevel
+
+  Module2:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./module2/template.yaml
+      Parameters:
+        StackName: !Ref StackName
+        Version: !Ref Version
+        Stage: !Ref Stage
+        LogLevel: !Ref LogLevel
+
+# IMPORTANT:
+#
+# BEFORE CREATING SUB STACKS, YOU MUST EXPORT THE RESOURCES BELOW FIRST BY CREATING ONLY THE MAIN STACK
+# Comment out Stacks Module1 and Module2 to create the root stack first.
+# Run command > make deploy
+#
+Outputs:
+  FunctionRole:
+    Value: !GetAtt FunctionRole.Arn
+    Export:
+      Name: !Sub "${StackName}-FunctionRole"
+
+  AlarmTopic:
+    Value: !Ref AlarmTopic
+    Export:
+      Name: !Sub "${StackName}-AlarmTopic"
+
+  PowerToolsLayer:
+    Value: !GetAtt AwsLambdaPowertoolsPythonLayer.Outputs.LayerVersionArn
+    Export:
+      Name: !Sub "${StackName}-PowerToolsLayer"
